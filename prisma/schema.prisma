@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ORG_ADMIN
+  VOLUNTEER
+}
+
+enum OrganizationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OpportunityStatus {
+  OPEN
+  FULL
+  CLOSED
+}
+
+enum SignUpStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  role          UserRole  @default(VOLUNTEER)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  organization  Organization? @relation("OrganizationAdmin")
+  signUps       SignUp[]
+  
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Organization {
+  id          String             @id @default(cuid())
+  name        String
+  description String?            @db.Text
+  email       String
+  phone       String?
+  address     String?
+  website     String?
+  status      OrganizationStatus @default(PENDING)
+  adminId     String             @unique
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // Relations
+  admin         User          @relation("OrganizationAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[]
+
+  @@index([status])
+  @@index([adminId])
+}
+
+model Opportunity {
+  id             String            @id @default(cuid())
+  title          String
+  description    String            @db.Text
+  location       String
+  startDate      DateTime
+  endDate        DateTime
+  totalSlots     Int
+  filledSlots    Int               @default(0)
+  status         OpportunityStatus @default(OPEN)
+  requirements   String?           @db.Text
+  organizationId String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  signUps      SignUp[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([startDate])
+}
+
+model SignUp {
+  id            String       @id @default(cuid())
+  volunteerId   String
+  opportunityId String
+  status        SignUpStatus @default(CONFIRMED)
+  notes         String?      @db.Text
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  volunteer   User        @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([volunteerId, opportunityId])
+  @@index([volunteerId])
+  @@index([opportunityId])
+  @@index([status])
+}
