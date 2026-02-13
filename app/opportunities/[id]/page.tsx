@@ -1,8 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { UserRole } from "@prisma/client"
 import SignUpButton from "@/components/SignUpButton"
 
@@ -26,7 +25,7 @@ export default async function OpportunityDetailPage({
   params: { id: string }
 }) {
   const opportunity = await getOpportunity(params.id)
-  const session = await getServerSession(authOptions)
+  const session = await auth()
 
   if (!opportunity) {
     notFound()

@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { UserRole, OpportunityStatus } from "@prisma/client"
 import { sendSignUpConfirmation, sendSignUpNotificationToOrg } from "@/lib/email"
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session || session.user.role !== UserRole.VOLUNTEER) {
       return NextResponse.json(

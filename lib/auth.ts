@@ -1,12 +1,12 @@
-import { NextAuthOptions } from "next-auth"
+import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 import { UserRole } from "@prisma/client"
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },
@@ -27,7 +27,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
+          where: { email: credentials.email as string }
         })
 
         if (!user || !user.password) {
@@ -35,7 +35,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
+          credentials.password as string,
           user.password
         )
 
@@ -60,18 +60,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role
         token.id = user.id
+        token.role = (user as any).role
       }
       return token
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.role = token.role as UserRole
-        session.user.id = token.id as string
+      if (session.user) {
+        (session.user as any).id = token.id
+        (session.user as any).role = token.role
       }
       return session
-    }
+    },
   },
-  secret: process.env.NEXTAUTH_SECRET,
-}
+})

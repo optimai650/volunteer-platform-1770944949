@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { UserRole, OrganizationStatus } from "@prisma/client"
 import Link from "next/link"
@@ -34,7 +33,7 @@ async function getSuperAdminData() {
 }
 
 export default async function SuperAdminDashboard() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
 
   if (!session || session.user.role !== UserRole.SUPER_ADMIN) {
     redirect("/auth/signin")
